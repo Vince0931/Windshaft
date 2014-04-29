@@ -1,6 +1,10 @@
 Version 0.20.1
 2014-MM-DD
 
+ Bug fixes:
+
+ - Do not omit points close to tile boundary from torque tiles (#186)
+
 Version 0.20.0
 2014-03-20
 
