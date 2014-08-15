@@ -459,7 +459,7 @@ suite('server_gettile', function() {
     });
 
     // See http://github.com/CartoDB/Windshaft/issues/100
-    test.skip("unused directives are not tolerated if strict",  function(done){
+    test("unused directives are not tolerated if strict",  function(done){
         var style = querystring.stringify({
           style: "#test_table{point-transform: 'scale(100)';}",
           sql: "SELECT 1 as cartodb_id, 'SRID=3857;POINT(666 666)'::geometry as the_geom"
