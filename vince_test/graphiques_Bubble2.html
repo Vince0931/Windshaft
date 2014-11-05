@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+
+<link href="css/bootstrap.css" rel="stylesheet">
+
+<style>
+
+      body {
+        background-color: white;
+        padding-left: 50px;
+      }
+      
+      .btn-group {
+        margin-left: 330px;
+      }
+      .label {
+        fill: black;
+        font-size: 16px;
+      }
+    
+
+</style>
+<body>
+<script src="libs/jquery-2.1.1.min.js"></script>
+<script src="libs/d3.min.js"></script>
+<script src="libs/underscore.js"></script>
+<script src="libs/bootstrap.js"></script>
+
+
+
+</div class="row">
+  <div class="btn-group" data-toggle="buttons">
+    <label class="btn btn-primary active" id="dep">
+      <input type="radio" name="options"> Departements
+    </label>
+    <label class="btn btn-primary" id="categorie">
+      <input type="radio" name="options"> Catégorie
+    </label>
+    <label class="btn btn-primary" id="statut">
+      <input type="radio" name="options"> Statut
+    </label>
+    <label class="btn btn-primary" id="reg">
+      <input type="radio" name="options"> Région
+    </label>
+  </div>
+</div>
+
+
+<button onclick="loadListeEts()"> Postgres Liste Ets</button>
+
+<div id="chart"></div>
+
+<script>
+
+var ipVince = '192.168.75.133';
+var dbname='postgres';
+var table='epmsi_dgf_11_13_84';
+
+
+function loadListeEts(){
+
+	var urlGet = 'http://' + ipVince + ':4000/database/' + dbname + '/listeEts';
+
+	$.ajax({
+		type: "GET",
+		url: urlGet,
+		cache:false,
+		data: {tableName : table},
+  		jsonpCallback : 'listeEtsJsonpCallback',
+		dataType: "jsonp"
+	});
+
+}
+
+
+function listeEtsJsonpCallback(json) {
+    if (!json.Error) {
+
+		var result = '';
+		var geojsonFeature;
+
+
+    var minRadius = 5;
+    var maxRadius = 100;
+
+    var data = [];
+
+
+    //filtre json pour ne garde que les valeurs non nulles
+    var i =0;
+    for (var j = 0; j < json.length; j++) {
+      var value =  json[j].categorie;
+      if (value) {
+        data[i] = json[j];
+        i++;
+      };
+    }
+
+
+    //définie une catégorie spécifique pour dissocier les valeurs positives négatives
+    var width = 1000, height = 800;
+    function categorizeChange(c){
+                        if (isNaN(c)) { return 0;
+                        } else if ( c < -25.0) { return -3;
+                        } else if ( c < - 5.0){ return -2;
+                        } else if ( c < - 1.0){ return -1;
+                        } else if ( c <=  1.0){ return 0;
+                        } else if ( c <=  5.0){ return 1;
+                        } else if ( c <= 25.0){ return 2;
+                        } else { return 3; }
+                      };
+
+    var fillColor       = d3.scale.ordinal().domain([-3,-2,-1,0,1,2,3]).range(["#d84b2a", "#ee9586","#e4b7b2","#AAA","#beccae", "#9caf84", "#7aa25c"]);
+
+    var strokeColor     = d3.scale.ordinal().domain([-3,-2,-1,0,1,2,3]).range(["#c72d0a", "#e67761","#d9a097","#999","#a7bb8f", "#7e965d", "#5a8731"]);
+     
+
+   function getFillColor(d){
+      /*
+      if (d.isNegative) {
+        return "#fff"
+      }*/
+      return fillColor(d.changeCategory);
+    };
+
+    function getStrokeColor(d){
+      // if (d.isNegative) {
+      //   return "#333"
+      // }
+      return strokeColor(d.changeCategory);
+    };
+
+    var svg = d3.select("#chart").append("svg")
+        .attr("width", width)
+        .attr("height", height);
+
+    var max_amount = d3.max(data, function (d) { return parseInt(d.ann_2013)})
+    var radius_scale = d3.scale.pow().exponent(0.5).domain([0, max_amount]).range([4, 90])
+
+    //reconstruit le tableau des valeurs
+    for (var j = 0; j < data.length; j++) {
+
+      data[j].radius = radius_scale(data[j].ann_2013)*.8;
+      //data[j].all = 'all';
+      data[j].x = _.random(0, width);
+      data[j].y = _.random(0, height);
+
+      data[j].changeCategory = categorizeChange(data[j].tx_evo_moyen_annuel);
+    }
+
+
+    var padding = 2;
+    var maxRadius = d3.max(_.pluck(data, 'radius'));
+
+    var getCenters = function (vname, size) {
+      var centers, map;
+      centers = _.uniq(_.pluck(data, vname)).map(function (d) {
+        return {name: d, value: 1};
+      });
+
+      map = d3.layout.treemap().size(size).ratio(1/1);
+      map.nodes({children: centers});
+
+      return centers;
+    };
+
+    var nodes = svg.selectAll("circle")
+      .data(data);
+
+    nodes.enter().append("circle")
+      .attr("class", "node")
+      .attr("cx", function (d) { return d.x; })
+      .attr("cy", function (d) { return d.y; })
+      .attr("r", function (d) { return d.radius; })
+      .style("fill", function(d) {  return getFillColor(d); } )
+      .style("stroke", function(d){ return getStrokeColor(d); })
+      .on("mouseover", function (d) { showPopover.call(this, d); })
+      .on("mouseout", function (d) { removePopovers(); })
+
+    var force = d3.layout.force();
+
+    var layout_gravity = -0.01;
+    var damper = 0.1;
+
+    draw('dep');
+
+    $( ".btn" ).click(function() {
+      draw(this.id);
+    });
+
+  
+
+    function draw (varname) {
+      var centers = getCenters(varname, [width, height]);
+      
+      labels(centers)
+      force.gravity(0.01)
+           
+           .friction(0.9)
+           .on("tick", tick(centers, varname));
+       
+
+      force.start();
+    }
+
+
+    function tick (centers, varname) {
+      var foci = {};
+      for (var i = 0; i < centers.length; i++) {
+        foci[centers[i].name] = centers[i];
+      }
+
+      return function (e) {
+        for (var i = 0; i < data.length; i++) {
+          var d = data[i];
+          var f = foci[d[varname]];
+
+          d.y += ((f.y + (f.dy / 2)) - d.y) * e.alpha ;
+          d.x += ((f.x + (f.dx / 2)) - d.x) * e.alpha ;
+
+
+        }
+        
+        nodes.each(collide(.5))
+          .attr("cx", function (d) { return d.x; })
+          .attr("cy", function (d) { return d.y; });
+          
+      }
+    }
+
+    function labels (centers) {
+      svg.selectAll(".label").remove();
+
+      svg.selectAll(".label")
+      .data(centers).enter().append("text")
+      .attr("class", "label")
+      .text(function (d) { return d.name })
+      .attr("transform", function (d) {
+        return "translate(" + (d.x + (d.dx / 2)) + ", " + (d.y + 20) + ")";
+      });
+    }
+
+    function removePopovers () {
+      $('.popover').each(function() {
+        $(this).remove();
+      }); 
+    }
+
+    function showPopover (d) {
+      $(this).popover({
+        placement: 'auto top',
+        container: 'body',
+        trigger: 'manual',
+        html : true,
+        content: function() { 
+          return "Nom : " + d.nom_poly + "<br/>Categorie : " + d.categorie + 
+                 "<br/>Département : " + d.dep + "<br/>CA : " + d.ann_2013/10000 + " k€ " +
+                 "<br/>TX évolution moyen : " + d.tx_evo_moyen_annuel + " %"; 
+        }
+      });
+      $(this).popover('show')
+    }
+
+    function collide(alpha) {      
+      var quadtree = d3.geom.quadtree(data);
+      return function (d) {
+        var r = d.radius + maxRadius + padding,
+            nx1 = d.x - r,
+            nx2 = d.x + r,
+            ny1 = d.y - r,
+            ny2 = d.y + r;
+        quadtree.visit(function(quad, x1, y1, x2, y2) {
+          if (quad.point && (quad.point !== d)) {
+            var x = d.x - quad.point.x,
+                y = d.y - quad.point.y,
+                l = Math.sqrt(x * x + y * y),
+                r = d.radius + quad.point.radius + padding;
+            if (l < r) {
+              l = (l - r) / l * alpha;
+              d.x -= x *= l;
+              d.y -= y *= l;
+              quad.point.x += x;
+              quad.point.y += y;
+            }
+          }
+          return x1 > nx2 || x2 < nx1 || y1 > ny2 || y2 < ny1;
+        });
+      };
+    }
+    
+
+
+    }else {
+    	//FAIL
+    }
+}
+
+
+
+
+
+
+
+</script>

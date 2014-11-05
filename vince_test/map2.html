@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Vince server test</title>
+
+	<script src="libs/jquery-2.1.1.min.js"></script>
+	<link rel="stylesheet" href="http://cdn.leafletjs.com/leaflet-0.7.2/leaflet.css" />
+	<script src="http://cdn.leafletjs.com/leaflet-0.7.2/leaflet.js"></script>
+	<script src="libs/leaflet.utfgrid.js"></script>
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<!--<meta name="viewport" content="initial-scale=1.0" />-->
+	<!--<link href='retinaStyle.css' rel='stylesheet' type='text/css'>-->
+
+	<style type="text/css">html,body{height: 100%} *{margin: 0}</style>
+</head>
+<body>
+
+<!--<input type="text" value="postgres" id="dbname">-->
+<!--<input type="text" value="commune_pmsi_84" id="table">-->
+
+<select name="select" onchange="onChangeTable(this)"></select>
+
+<!--<button onclick="clickGO()">GO</button>-->
+<button onclick="loadPostgresTables()"> Postgres Tables</button>
+
+<div id="containerMain" style="width:100%; height:100%">
+
+	<div id="containerMap" style="width:100%; height:80%">
+		<div id="map" style="width:70%; height:100%; float:left"></div>
+		<div id="selectionInfo" style = "width: 30%; height: 100%; overflow-y: scroll; font-size:14px; float:right"></div>
+	</div>
+
+	<div id="serveurInfo" style = "width: 1400px; height: 20%; overflow-y: scroll; font-size:10px;"></div>
+</div>
+
+
+<!--<div id="click"></div>-->
+<!--<div id="hover"></div>-->
+
+<!--<div id="serveurInfo" style = "width: 950px; height: 150px; overflow-y: scroll; font-size:10px "></div>-->
+
+	<script type="text/javascript">
+
+
+		serverMessage('INIT MAP');
+
+		var map = L.map('map');
+
+		var retina = false;
+		//var ipVince = '192.168.75.133';
+		var ipVince = 'localhost';
+
+		//192.168.75.133:8888/map2.html
+
+		//OpenStreetMap  EPSG:3857
+
+		//var dbname=document.getElementById('dbname').value;
+		//var table= document.getElementById('table').value;
+
+		var dbname='postgres2';
+		var table='commune_pmsi_84';
+
+		var mapBoxUrl =  'http://{s}.tiles.mapbox.com/v3/examples.map-qfyrx5r8/{z}/{x}/{y}.png';
+		var acetateUrl =  'http://{s}.acetate.geoiq.com/tiles/acetate/{z}/{x}/{y}.png';
+		var googleUrl =  'http://mt3.google.com/vt/lyrs=y&x={x}&y={y}&z={z}';
+		var openstreetmapUrl =  'http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+
+		var cartoDB_blackUrl = 'https://dnv9my2eseobd.cloudfront.net/v3/cartodb.map-4xtxp73f/{z}/{x}/{y}.png';
+
+		var messageSer = '';
+
+		serverMessage('LOAD background map : ' + cartoDB_blackUrl);
+
+		var tilesBack = L.tileLayer(acetateUrl, {
+			maxZoom: 18,
+			detectRetina: retina
+		});
+ 
+		var tilesMap1 = getMapTiles(dbname,table);
+		var gridMap1 = getMapGrid(dbname,table);
+
+		var popup;
+		var popupPosition;
+
+		var multiPolygon;
+
+
+		serverMessage('LOAD TABLES WGS 84 only');
+		loadPostgresTables()
+/*
+		var openweathermapUrl =  'http://{s}.tile.openweathermap.org/map/precipitation/{z}/{x}/{y}.png';
+
+		var tiles3 = L.tileLayer(openweathermapUrl, {
+			maxZoom: 18,
+			opacity: 0.5,
+			detectRetina: retina
+		});
+*/
+
+		//--------------------------
+		//    MAP init
+		//--------------------------
+		serverMessage('ADD layer backgroud');
+
+		map.setView([49, -0.09], 5)
+		   .addLayer(tilesBack);
+
+		map.addLayer(tilesMap1);
+		serverMessage('ADD layer map 1');
+
+		map.addLayer(gridMap1);
+		serverMessage('ADD layer grid 1');
+
+		serverMessage('---------------------------------------------------------------------------------------');
+
+
+
+		//--------------------------
+		//       fUNCTIONS
+		//--------------------------
+		
+		function serverMessage(message){
+			messageSer += message + '<br>';
+			document.getElementById('serveurInfo').innerHTML = messageSer;
+		}
+
+		function selectionInfo(info){
+			document.getElementById('selectionInfo').innerHTML = info;
+		}
+
+		function getMapTiles(dbname, table){
+
+			var vinceServerURL = 'http://' + ipVince + ':4000/database/' + dbname + '/table/'+table;
+			var tilesURL =  vinceServerURL + '/{z}/{x}/{y}.png';
+
+			serverMessage('GET tiles : ' + tilesURL);
+
+			return L.tileLayer(tilesURL, {
+				maxZoom: 18,
+				detectRetina: retina
+			});
+
+
+
+		}
+
+		function getMapGrid(dbname, table){
+
+			var vinceServerURL = 'http://' + ipVince + ':4000/database/' + dbname + '/table/'+table;
+			var gridURL =  vinceServerURL+'/{z}/{x}/{y}.grid.json?callback={cb}';
+
+			serverMessage('GET grid : ' + gridURL);
+
+			var utfGrid = new L.UtfGrid(gridURL, {
+				maxZoom: 18,
+				detectRetina: retina
+			});
+
+
+			utfGrid.on('click', function (e) {
+				if (e.data) {
+						popupPosition = e.latlng;
+						loadInfoNom(e.data.id );
+						
+				} 
+			});
+			/*
+			utfGrid.on('mouseover', function (e) {
+				if (e.data) {
+					document.getElementById('hover').innerHTML = 'hover: ' + e.data.nom_poly;
+				} else {
+					document.getElementById('hover').innerHTML = 'hover: nothing';
+				}
+			
+			});
+			utfGrid.on('mouseout', function (e) {
+	
+			});*/
+
+			return utfGrid;
+		}
+		
+
+
+
+		function addMarkerTest(){
+
+			var aphmMarker = L.marker([43.3817, 5.36346]).addTo(map);
+			aphmMarker.title = 'AP-HM Nord';
+			
+			aphmMarker.on('click', function (e) {
+				if (e.target) {
+
+						var popup = L.popup()
+	    						.setLatLng(e.latlng)
+	    						.setContent('<p>' + e.target.title +'</p>')
+	    						.openOn(map);
+
+				} 
+			});
+		}
+
+	
+		function clickGO(){
+
+			serverMessage('LOAD NEW MAP');
+
+			map.removeLayer(tilesMap1).removeLayer(gridMap1);
+			serverMessage('REMOVE layer map 1');
+			serverMessage('REMOVE layer grid 1');
+
+			//var dbname=document.getElementById('dbname').value
+			//var table=document.getElementById('table').value
+
+			tilesMap1 = getMapTiles(dbname,table);
+			gridMap1 = getMapGrid(dbname,table);
+
+			if (tilesMap1) {
+				map.addLayer(tilesMap1);
+				serverMessage('ADD layer map 1');
+			}else{
+				serverMessage('ERROR : tiles map vide');
+			}
+
+			if (gridMap1) {
+				map.addLayer(gridMap1);
+				serverMessage('ADD layer grid 1');
+			}else{
+				serverMessage('ERROR : grid map vide');
+			}
+
+			serverMessage('---------------------------------------------------------------------------------------');
+
+		}
+
+
+		function onChangeTable(tableName){
+		
+			//close pop up
+			map.closePopup(popup);
+
+			serverMessage('CHANGE postgres tableName ' + tableName.value);
+
+ 			//document.getElementById('table').value = tableName.value;
+			//dbname=document.getElementById('dbname').value
+			//table=document.getElementById('table').value
+
+			table=tableName.value;
+
+			var urlPost = 'http://localhost:4000/database/' + dbname + '/table/'+table+'/style';
+
+			if (tableName.value == 'commune_pmsi_84') {
+				var carto_css = {"style":"#commune_pmsi_84 {line-color: #000; line-width: 1; line-opacity:0.5; polygon-opacity:0.5; [population >= 0 ]   { polygon-fill: #FFFFFF;} [population >= 2 ]   { polygon-fill: #C4C0FF;} [population >= 10]   { polygon-fill: #8A82FF;} [population >= 100 ]   { polygon-fill: #5043FF;} [population >= 500 ]   { polygon-fill: #1605FF;} }","style_version":"2.0.0"};
+		
+			}else if (tableName.value == 'communes_ptz84') {
+
+				var carto_css = {"style":"#communes_ptz84 {line-color: #000; line-width: 1; line-opacity:0.5; polygon-opacity:0.5; [zonage = 'C']   { polygon-fill: #5af476;} [zonage = 'B2']  { polygon-fill: #4166eb;} [zonage = 'B1']  { polygon-fill: #c542ff;} [zonage = 'A']   { polygon-fill: #ff0533;} } ","style_version":"2.0.0"}; 
+
+			}else if (tableName.value == 'liste_ets_allogreffe84') {
+
+				var carto_css = {"style":"#liste_ets_allogreffe84 {marker-line-color:#4a4849; marker-allow-overlap:true; [nb_sejour >= 1]   {marker-width:5; marker-fill:#f1b139; } [nb_sejour >= 2]  {marker-width:10; marker-fill:#f99c3c; } [nb_sejour >= 6]  {marker-width:15; marker-fill:#fc5e3a; } [nb_sejour >= 15]   {marker-width:30; marker-fill:#fc3737; } } ","style_version":"2.0.0"}; 
+
+			}else if (tableName.value == 'liste_ets_autogreffe84') {
+
+				var carto_css = {"style":"#liste_ets_autogreffe84 {marker-line-color:#4a4849; marker-allow-overlap:true; [nb_sejour >= 1]   {marker-width:5; marker-fill:#f1b139; } [nb_sejour >= 2]  {marker-width:10; marker-fill:#f99c3c; } [nb_sejour >= 6]  {marker-width:15; marker-fill:#fc5e3a; } [nb_sejour >= 15]   {marker-width:30; marker-fill:#fc3737; } } ","style_version":"2.0.0"}; 
+			}/*else if (tableName.value == 'epmsi_dgf_11_13_84') {
+				 var carto_css = {"style":"#epmsi_dgf_11_13_84 {marker-line-color:#030303; marker-allow-overlap:true; marker-opacity: 1; marker-type: arrow; marker-width:25.0; [tx_evo_moyen_annuel = 0.0] {marker-transform:'rotate(0.0)'; } [tx_evo_moyen_annuel > 0.0] {marker-transform:'rotate(-22.5)'; } [tx_evo_moyen_annuel > 2.0] {marker-transform:'rotate(-45)'; } [tx_evo_moyen_annuel > 5.0] {marker-transform:'rotate(-67.5)'; } [tx_evo_moyen_annuel > 6.0] {marker-transform:'rotate(-90)'; } [tx_evo_moyen_annuel < -0.0] {marker-transform:'rotate(22.5)'; } [tx_evo_moyen_annuel < -3.0] {marker-transform:'rotate(45)'; } [tx_evo_moyen_annuel < -5.0] {marker-transform:'rotate(67.5)'; } [tx_evo_moyen_annuel < -10.0] {marker-transform:'rotate(90)'; } [ann_2013 >= 0]   	 {marker-fill:#32d716; } [ann_2013 >= 375366]   {marker-fill:#60cc9f; } [ann_2013 >= 4759910]  {marker-fill:#2b6cb5; } [ann_2013 >= 21147100] {marker-fill:#d49826; } [ann_2013 >= 53596100] {marker-fill:#df3333; } }","style_version":"2.0.0"};
+			}*/
+
+			//TODO bug fix problm de cross domain
+			// No 'Access-Control-Allow-Origin' header is present on the requested resource. Origin 'http://localhost:8888' is therefore not allowed access. 
+
+			$.post(
+				urlPost,
+				carto_css,
+				'json'
+			).success( 
+				function( messs ) {
+			    	serverMessage('REQUEST POST : css OK');
+				}
+			).error( 
+				function(err){
+					serverMessage('REQUEST POST : post css FAIL');
+          		}
+          	);
+
+			clickGO();
+		}
+
+	
+
+	    function loadPostgresTables(){
+
+			var urlGet = 'http://' + ipVince + ':4000/database/' + dbname + '/tables';
+
+			$.ajax({
+				type: "GET",
+				url: urlGet,
+          		jsonpCallback : 'tablesJsonpCallback',
+				dataType: "jsonp"
+			})
+
+	    }
+
+	    function tablesJsonpCallback(json) {
+	        if (!json.Error) {
+
+				serverMessage('REQUEST GET : liste tables OK');
+
+				$('select')
+    				.find('option')
+    				.remove()
+    				.end();
+
+				$.each(json, function(key, value) {   
+
+					var compare = value.substring(value.length-2, value.length);
+					
+					if (compare == '84') {
+						$('select')
+				         	.append($("<option></option>")
+				         	.text(value)); 
+					};
+				  
+				});
+	      
+	        }
+	        else {
+				serverMessage('REQUEST GET : liste tables FAIL');
+	        }
+	    }
+
+
+
+	    function loadInfoNom(id_poly){
+
+	    	selectionInfo('');
+
+			var urlGet = 'http://' + ipVince + ':4000/database/' + dbname + '/infoNom';
+
+			serverMessage(urlGet);
+
+			$.ajax({
+				type: "GET",
+				url: urlGet,
+				cache:false,
+				data: {paramsID : id_poly, tableName : table},
+          		jsonpCallback : 'infoNomJsonpCallback',
+				dataType: "jsonp"
+			})
+
+	    }
+
+	    function infoNomJsonpCallback(json) {
+	        if (!json.Error) {
+
+				serverMessage('REQUEST GET : info selection OK');
+
+				var result = '';
+
+				var nom_poly = '';
+				var geojsonFeature;
+
+				$.each(json,function(object){ 
+
+			      $.each(json[object],function(values){ 
+
+			      	if (values == 'nom_poly') {
+			      		nom_poly = json[object][values];
+			      	};
+
+					if (values == 'geojson') {
+			      		geojsonFeature = json[object][values];
+			      	};
+
+			        result+= 	" "+ values +" : "+ json[object][values] + '<br>';
+			      });
+
+			    });
+
+	
+				if (result == '') {
+
+					selectionInfo('NO RESULTS');
+
+				}else{
+					selectionInfo(result);
+
+					var arrComms = nom_poly.split(',');
+					var nom_poly_cal;
+
+					if (arrComms.length > 5) {
+
+						nom_poly_cal = 	' ' + arrComms[0] + ' + ' + (arrComms.length-1) + ' communes';
+
+					}else{
+						nom_poly_cal = nom_poly;
+					};
+
+					//add popup sur l'image avec infoirmation du polygone sélectionné
+					popup = L.popup()
+	    						.setLatLng(popupPosition)
+	    						.setContent('<p>' + nom_poly_cal +'</p>')
+	    						.openOn(map);
+
+	    			//add polygon de la sélection	
+	    			//TODO : bug fix polygon format problem projection
+	    			//multiPolygon = L.geoJson(geojsonFeature).addTo(map);
+
+				}
+
+				
+	      
+	        }
+	        else {
+
+	        	selectionInfo('NO RESULTS');
+				serverMessage('REQUEST GET : info selection FAIL');
+	        }
+	    }
+
+
+
+
+	</script>
+</body>
+
+</html>

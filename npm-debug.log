@@ -1,0 +1,94 @@
+0 info it worked if it ends with ok
+1 verbose cli [ 'node', '/usr/local/bin/npm', 'install', 'webpage' ]
+2 info using npm@1.4.24
+3 info using node@v0.10.32
+4 verbose node symlink /usr/local/bin/node
+5 warn package.json http@0.0.0 http is also the name of a node core module.
+6 warn package.json http@0.0.0 No description
+7 warn package.json http@0.0.0 No repository field.
+8 warn package.json http@0.0.0 No README data
+9 warn package.json fs@0.0.2 fs is also the name of a node core module.
+10 warn package.json fs@0.0.2 No description
+11 warn package.json fs@0.0.2 No repository field.
+12 warn package.json fs@0.0.2 No README data
+13 warn package.json querystring@0.2.0 querystring is also the name of a node core module.
+14 verbose readDependencies using package.json deps
+15 verbose cache add [ 'webpage', null ]
+16 verbose cache add name=undefined spec="webpage" args=["webpage",null]
+17 verbose parsed url { protocol: null,
+17 verbose parsed url   slashes: null,
+17 verbose parsed url   auth: null,
+17 verbose parsed url   host: null,
+17 verbose parsed url   port: null,
+17 verbose parsed url   hostname: null,
+17 verbose parsed url   hash: null,
+17 verbose parsed url   search: null,
+17 verbose parsed url   query: null,
+17 verbose parsed url   pathname: 'webpage',
+17 verbose parsed url   path: 'webpage',
+17 verbose parsed url   href: 'webpage' }
+18 silly lockFile c3c0e61b-webpage webpage
+19 verbose lock webpage /Users/vincentcau/.npm/c3c0e61b-webpage.lock
+20 silly lockFile c3c0e61b-webpage webpage
+21 silly lockFile c3c0e61b-webpage webpage
+22 verbose addNamed [ 'webpage', '' ]
+23 verbose addNamed [ null, '*' ]
+24 silly lockFile 92ce8f44-webpage webpage@
+25 verbose lock webpage@ /Users/vincentcau/.npm/92ce8f44-webpage.lock
+26 silly addNameRange { name: 'webpage', range: '*', hasData: false }
+27 verbose request where is /webpage
+28 verbose request registry https://registry.npmjs.org/
+29 verbose request id ac45a84be1918b62
+30 verbose url raw /webpage
+31 verbose url resolving [ 'https://registry.npmjs.org/', './webpage' ]
+32 verbose url resolved https://registry.npmjs.org/webpage
+33 verbose request where is https://registry.npmjs.org/webpage
+34 info trying registry request attempt 1 at 12:15:44
+35 http GET https://registry.npmjs.org/webpage
+36 http 404 https://registry.npmjs.org/webpage
+37 verbose headers { date: 'Thu, 30 Oct 2014 11:15:45 GMT',
+37 verbose headers   server: 'CouchDB/1.5.0 (Erlang OTP/R14B04)',
+37 verbose headers   'content-type': 'application/json',
+37 verbose headers   'cache-control': 'max-age=0',
+37 verbose headers   'content-length': '52',
+37 verbose headers   'accept-ranges': 'bytes',
+37 verbose headers   via: '1.1 varnish',
+37 verbose headers   age: '0',
+37 verbose headers   'x-served-by': 'cache-fra1220-FRA',
+37 verbose headers   'x-cache': 'MISS',
+37 verbose headers   'x-cache-hits': '0',
+37 verbose headers   'x-timer': 'S1414667744.696921,VS0,VE452',
+37 verbose headers   'keep-alive': 'timeout=10, max=50',
+37 verbose headers   connection: 'Keep-Alive' }
+38 silly registry.get cb [ 404,
+38 silly registry.get   { date: 'Thu, 30 Oct 2014 11:15:45 GMT',
+38 silly registry.get     server: 'CouchDB/1.5.0 (Erlang OTP/R14B04)',
+38 silly registry.get     'content-type': 'application/json',
+38 silly registry.get     'cache-control': 'max-age=0',
+38 silly registry.get     'content-length': '52',
+38 silly registry.get     'accept-ranges': 'bytes',
+38 silly registry.get     via: '1.1 varnish',
+38 silly registry.get     age: '0',
+38 silly registry.get     'x-served-by': 'cache-fra1220-FRA',
+38 silly registry.get     'x-cache': 'MISS',
+38 silly registry.get     'x-cache-hits': '0',
+38 silly registry.get     'x-timer': 'S1414667744.696921,VS0,VE452',
+38 silly registry.get     'keep-alive': 'timeout=10, max=50',
+38 silly registry.get     connection: 'Keep-Alive' } ]
+39 silly lockFile 92ce8f44-webpage webpage@
+40 silly lockFile 92ce8f44-webpage webpage@
+41 error 404 404 Not Found: webpage
+41 error 404
+41 error 404 'webpage' is not in the npm registry.
+41 error 404 You should bug the author to publish it
+41 error 404 It was specified as a dependency of 'windshaft'
+41 error 404
+41 error 404 Note that you can also install from a
+41 error 404 tarball, folder, or http url, or git url.
+42 error System Darwin 14.0.0
+43 error command "node" "/usr/local/bin/npm" "install" "webpage"
+44 error cwd /Users/vincentcau/RetD/Cartes_isochrones/Windshaft
+45 error node -v v0.10.32
+46 error npm -v 1.4.24
+47 error code E404
+48 verbose exit [ 1, true ]

@@ -36,7 +36,7 @@ a version of PostGIS providing 'AsBinary' and friends (including legacy.sql
 for PostGIS-2.0).
 
 Flushing your redis database may be needed if you are developing or after
-changes to the environment configuration: ```redis-cli -p 6333 flushall```.
+changes to the environment configuration: ```redis-cli -p 6379 flushall```.
 
 Execution
 ---------

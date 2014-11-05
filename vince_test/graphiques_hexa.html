@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<style>
+
+	.axis text {
+	  font: 10px sans-serif;
+	}
+
+	.axis path,
+	.axis line {
+	  fill: none;
+	  stroke: #000;
+	  shape-rendering: crispEdges;
+	}
+
+	.hexagon {
+	  fill: none;
+	  stroke: #000;
+	  stroke-width: .5px;
+	}
+
+</style>
+<body>
+<script src="jquery-2.1.1.min.js"></script>
+<script src="http://d3js.org/d3.v3.min.js"></script>
+<script src="http://d3js.org/d3.hexbin.v0.min.js?5c6e4f0"></script>
+
+<button onclick="loadListeEts()"> Postgres Liste Ets</button>
+
+
+<script>
+
+var ipVince = '192.168.75.133';
+var dbname='postgres';
+//var table='epmsi_dgf_11_13_84';
+var table='list_ets84';
+
+var points = [];
+
+var minLat = 1000000000,
+    maxLat = -1000000000,
+    minLong =1000000000,
+    maxLong =-1000000000
+
+function loadListeEts(){
+
+	var urlGet = 'http://' + ipVince + ':4000/database/' + dbname + '/listeEts';
+
+	$.ajax({
+		type: "GET",
+		url: urlGet,
+		cache:false,
+		data: {tableName : table},
+  		jsonpCallback : 'listeEtsJsonpCallback',
+		dataType: "jsonp"
+	})
+
+}
+
+
+function listeEtsJsonpCallback(json) {
+    if (!json.Error) {
+
+		var result = '';
+		var geojsonFeature;
+
+	
+		var i = 0;
+
+		$.each(json,function(object){ 
+
+			var coorLat  = parseFloat(this.latitude);
+			var coorLong = parseFloat(this.longitude)
+
+			if (coorLat > maxLat )
+				maxLat = coorLat;
+			
+			if (coorLat < minLat)
+				minLat = coorLat;
+
+			if (coorLong > maxLong )
+				maxLong = coorLong;
+			
+			if (coorLong < minLong)
+				minLong = coorLong;
+		
+	      
+	    });
+
+		console.log(points)
+		console.log("latitude  min:" + minLat + " max:" + maxLat)
+		console.log("longitude min:" + minLong + " max:" + maxLong)
+
+
+		var scalelat = 100;
+		var scalelong = 0.8 *scalelat;
+		//decale origine and scale
+		i = 0;
+		$.each(json,function(object){ 
+
+			var coorLat  = (- (parseFloat(this.latitude) -minLat) )*scalelat + (maxLat-minLat)*scalelat;
+			var coorLong = (parseFloat(this.longitude) - minLong)*scalelong   ;
+
+			points[i] = [coorLong, coorLat];
+			i++;
+	      
+	    });
+
+		minLat = 1000000000,
+	    maxLat = -1000000000,
+	    minLong =1000000000,
+	    maxLong =-1000000000
+
+	    $.each(points,function(object){ 
+
+			var coorLat  = this[1];
+			var coorLong = this[0];
+
+			if (coorLat > maxLat )
+				maxLat = coorLat;
+			
+			if (coorLat < minLat)
+				minLat = coorLat;
+
+			if (coorLong > maxLong )
+				maxLong = coorLong;
+			
+			if (coorLong < minLong)
+				minLong = coorLong;
+			
+	    });
+	
+		
+	    maxLat*= 1.05;
+	    maxLong*= 1.05;
+
+		console.log(points)
+		console.log("latitude  min:" + minLat + " max:" + maxLat)
+		console.log("longitude min:" + minLong + " max:" + maxLong)
+
+		if (points.length > 0) {
+
+			drawGraphique();
+		
+		}else{
+			//FAIL
+
+		}
+  
+    }
+    else {
+    	//FAIL
+    }
+}
+
+
+
+
+function drawGraphique(){
+
+var margin = {top: 0, right: 0, bottom: 0, left: 0},
+    width = (maxLong-minLong) - margin.top - margin.bottom,
+    height = (maxLat-minLat) - margin.left - margin.right;
+
+/*
+	var margin = {top: 20, right: 20, bottom: 30, left: 40},
+    width = 960 - margin.left - margin.right,
+    height = 500 - margin.top - margin.bottom;
+*/
+/*
+	var randomX = d3.random.normal(width / 2, 80);
+	 var   randomY = d3.random.normal(height / 2, 80);
+	 var   points = d3.range(2000).map(function() { return [randomX(), randomY()]; });
+
+	console.log(points);
+
+*/
+
+	var radius = 5;
+
+	var color = d3.scale.linear()
+	    .domain([0, radius])
+	    .range(["white", "steelblue"])
+	    .interpolate(d3.interpolateLab);
+
+	var hexbin = d3.hexbin()
+	    .size([width, height])
+	    .radius(radius);
+
+	var x = d3.scale.identity()
+	    .domain([0, width]);
+
+	var y = d3.scale.linear()
+	    .domain([0, height])
+	    .range([height, 0]);
+
+	var xAxis = d3.svg.axis()
+	    .scale(x)
+	    .orient("bottom")
+	    .tickSize(6, -height);
+
+	var yAxis = d3.svg.axis()
+	    .scale(y)
+	    .orient("left")
+	    .tickSize(6, -width);
+
+	var svg = d3.select("body").append("svg")
+	    .attr("width", width + margin.left + margin.right)
+	    .attr("height", height + margin.top + margin.bottom)
+	  .append("g")
+	    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+	svg.append("clipPath")
+	    .attr("id", "clip")
+	  .append("rect")
+	    .attr("class", "mesh")
+	    .attr("width", width)
+	    .attr("height", height);
+
+	svg.append("g")
+	    .attr("clip-path", "url(#clip)")
+	  .selectAll(".hexagon")
+	    .data(hexbin(points))
+	  .enter().append("path")
+	    .attr("class", "hexagon")
+	    .attr("d", hexbin.hexagon())
+	    .attr("transform", function(d) { return "translate(" + d.x + "," + d.y + ")"; })
+	    .style("fill", function(d) { return color(d.length); });
+
+	svg.append("g")
+	    .attr("class", "y axis")
+	    .call(yAxis);
+
+	svg.append("g")
+	    .attr("class", "x axis")
+	    .attr("transform", "translate(0," + height + ")")
+	    .call(xAxis);
+}
+
+	
+
+</script>
